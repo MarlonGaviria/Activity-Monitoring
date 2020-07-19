@@ -1,0 +1,124 @@
+---
+title: "Activity Monitoring"
+author: "Marlon Gaviria Pérez"
+output: 
+  html_document:
+    toc: true
+    toc_float:
+      collapsed: false
+      smooth_scroll: true
+    code_folding: show
+    theme: cerulean
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## <font color = 'blue'>*Read the Data*</font>
+
+Please unfold the *code* bottom to see the respective lines of code
+
+```{r read data,comment='',message=FALSE, warning=FALSE}
+library(dplyr)
+
+act <- read.csv('activity.csv')
+
+total_steps <- na.omit(act %>% group_by(date) %>% summarise(total_steps=sum(steps)))
+
+```
+
+## <font color = 'blue'>*Histogram of the total number of steps taken each day*</font>
+
+```{r histogram of total steps, warning=FALSE, message=FALSE}
+total_steps <- na.omit(act %>% group_by(as.Date(date)) %>% summarise(total_steps=sum(steps)))
+hist(total_steps$total_steps, main = 'Total steps each day',
+     xlab = 'Steps',col = rainbow(n = 3,v = 0.5,alpha = 0.5))
+grid()
+
+```
+
+## <font color = 'blue'>*Mean and median number of steps taken each day*</font>
+
+```{r mean and meadian of steps, message=FALSE, warning=FALSE}
+library(kableExtra)
+med <- mean(total_steps$total_steps)
+mad <- median(total_steps$total_steps)
+mms <- data.frame(Values=c(med,mad), row.names=c('Mean','Median'))
+kable(mms) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+## <font color = 'blue'>*Time series plot of the average number of steps taken*</font>
+
+```{r plot of the average of steps, message=FALSE, warning=FALSE}
+avrg_steps <- na.omit(act %>% group_by(date=as.Date(date)) %>% summarise(avrg_steps=mean(steps)))
+plot(avrg_steps$date,avrg_steps$avrg_steps, type = 'l',lwd = 5, xlab = 'Day', ylab = 'Steps', 
+     col = 'cyan',)
+points(avrg_steps$date,avrg_steps$avrg_steps, type = 'l', col = 'darkblue')
+points(as.Date("2012-10-20"),40, cex=120,col = rgb(51/255,212/255,255/255,0.1),pch = 16)
+grid()
+
+```
+
+## <font color = 'blue'>*The 5-minute interval that, on average, contains the maximum number of steps*</font>
+
+```{r, max average interval, warning=FALSE,message=FALSE, comment=''}
+act <- na.omit(transform(act,interval=as.character(interval)))
+avgstps <- act %>% group_by(interval=as.character(interval)) %>% summarise(avrg_steps=mean(steps))
+avgstps[which.max(avgstps$avrg_steps),1]
+```
+
+the interval with the maximun average of steps is (835-840) with 206 steps by average.
+
+## <font color='blue'>*Code to describe and show a strategy for imputing missing data*</font>
+
+```{r}
+act_miss <- read.csv('activity.csv', sep = ',')
+
+act_miss$steps[is.na(act_miss$steps)] <- mean(act_miss$steps,na.rm = T)
+```
+
+## <font color='blue'>*Histogram of the total number of steps taken each day after missing values are imputed*</font>
+
+```{r host of total steps without NA, message=FALSE,warning=FALSE}
+total_steps <- na.omit(act_miss %>% group_by(as.Date(date)) %>% summarise(total_steps=sum(steps)))
+hist(total_steps$total_steps, main = 'Total steps each day',
+     xlab = 'Steps',col = rainbow(n = 3,v = 0.5,alpha = 0.5))
+grid()
+
+```
+
+## <font color='blue'>*Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends*</font>
+
+```{r week and weekend avrg steps, warning=FALSE,message=FALSE}
+
+library(lubridate)
+library(dplyr)
+weekend <- which( wday(as.Date(act_miss$date))==1 | wday(as.Date(act_miss$date))==7)
+
+act_miss_weekend <- act_miss[weekend,]
+act_miss_week <- act_miss[-weekend,]
+
+act_week <- act_miss_week %>% group_by(interval = as.character(interval)) %>% summarise(avr=mean(steps))
+act_weekend <- act_miss_weekend %>% group_by(interval = as.character(interval)) %>% summarise(avr=mean(steps))
+
+act_week <- act_week[order(as.numeric(act_week$interval)),]
+act_weekend <- act_weekend[order(as.numeric(act_weekend$interval)),]
+
+par(mfrow = c(2,1))
+# plot1
+plot(act_week$interval,act_week$avr, type = 'l', xlab = 'Intervals', ylab = 'Average of steps',
+     main='Week', col = 'cyan',lwd=4,fg='blue')
+points(act_week$interval,act_week$avr, type = 'l', col = 'blue')
+points(1250,75,pch=16,cex=100, col = rgb(51/255,212/255,255/255,0.1))
+grid()
+# plot2
+plot(act_weekend$interval,act_weekend$avr, type = 'l', xlab = 'Intervals', ylab = 'Average of steps',
+     main='Weekend', col = 'cyan',lwd=4,fg='blue')
+points(act_weekend$interval,act_weekend$avr, type = 'l', col = 'blue')
+points(1250,75,pch=16,cex=100, col = rgb(51/255,212/255,255/255,0.1))
+grid()
+
+```
+
